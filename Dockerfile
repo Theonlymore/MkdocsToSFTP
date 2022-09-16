@@ -6,7 +6,7 @@ RUN apk add --no-cache python3
 RUN apk add --no-cache py3-pip
 
 RUN apk add build-base
-RUN python -m pip install --upgrade pip
+RUN python3 -m pip install --upgrade pip
 RUN pip install --quiet --no-cache-dir mkdocs
 RUN pip install --quiet --no-cache-dir mkdocs-material
 RUN pip install --quiet --no-cache-dir mkdocs-git-revision-date-localized-plugin
