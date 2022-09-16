@@ -1,0 +1,9 @@
+name: "mkdocstoS3"
+description: "Github action to build an MkDocs site and upload to S3"
+author: onlymore
+runs:
+  using: docker
+  image: Dockerfile
+branding:
+  icon: arrow-up-circle
+  color: red
