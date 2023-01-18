@@ -1,48 +1,138 @@
-# Github action to build an mkdocs site and sync it to S3 :rocket:
-This is a very simple action to make publishing a static [mkdocs](https://www.mkdocs.org/) site even easier.
+# Mkdocs SFTP Deploy action
 
-## Usage
-### `workflow.yml` example
-To use this action within your own repository, place the following example in your `.github/workflows` directory.
+[Fork on this](https://github.com/wlixcc/SFTP-Deploy-Action)
 
-```
-name: DeployToS3
 
-on:
-  push:
-    branches:
-    - master
+
+## 1. Inputs 
+
+| Name                   | Required             | Default | Description                                   |
+|------------------------|----------------------|---------|-----------------------------------------------|
+`username` | yes| | SSH username
+`server` | yes| | Remote host
+`port`| yes | 22 | Remote host port
+`ssh_private_key`| yes| | You can copy private key from your `ssh_private_key.pem` file, and save to`repo/settings/secrets`![](./resource/secret.jpg)
+`local_path`| yes| ./* | `local_path` of you project, if you want put single file:use path like `./myfile`, if you want put directory: use path like `./static/*`, it will put all files under `static` directory. Default to `./*`(will put all files in your repo).
+`remote_path`|yes|| Remote path
+`sftp_only`| no| | If your port only accepts the sftp protocol, set this option to `true`. However, please note that when this option is set to `true`, the remote folder will not be created automatically.
+<strike>args</strike> `sftpArgs` | no| | other args yor want to use of sftp, E.g.`-o ConnectTimeout=5`
+`delete_remote_files` | no | false | Set `true` will delete all files in the remote path before upload. 
+`password`| no| | SSH passsword，If a password is set, `ssh_private_key` is ignored. `for @v1.2.4 and greater`
+
+> **Warning**
+
+> Be careful when use `delete_remote_files`, This will remove all files in your remote path before uploading
+
+## Action Examples
+
+```yaml
+on: [push]
 
 jobs:
-  deploy:
+    deploy_job:
     runs-on: ubuntu-latest
+    name: deploy
     steps:
-    - uses: actions/checkout@v2
-    - uses: thomasattree/mkdocs2S3@master
-      with:
-        args: --acl public-read --follow-symlinks --delete
-      env:
-        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: 'eu-west-1'   # optional: defaults to us-east-1
-        SOURCE_DIR: 'site'      # optional: defaults to entire repository
+        - name: Checkout
+        uses: actions/checkout@v2
+        - name: deploy file
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+            username: 'root'
+            server: 'your server ip'
+            ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }} 
+            local_path: './site/*'
+            remote_path: '/var/www/app'
+            sftpArgs: '-o ConnectTimeout=5'
 ```
 
-The s3 command uses the raw AWS CLI so any args supported within the CLI can be passed through in the with statement above. If you are going to use the above example verbatim, be warned `--delete` **permanently deletes** files in the S3 bucket that are **not** present in the latest version of your build.
-The above example will build and deploy your site on any push to master. This means your public site in S3 should always be up to date with your Github repository mkdocs `docs` directory.
+```yaml
+on: [push]
 
-## Environment variables
-The action requires at least `AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID` & `AWS_SECRET_ACCESS_KEY`. Store these as Github secrets and not statically typed in your configuration.
+jobs:
+    deploy_job:
+    runs-on: ubuntu-latest
+    name: deploy
+    steps:
+        - name: Checkout
+        uses: actions/checkout@v2
+        - name: Deploy file
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+            username: ${{ secrets.FTP_USERNAME }}
+            server: ${{ secrets.FTP_SERVER }}
+            port: ${{ secrets.FTP_PORT }}
+            local_path: './site/*'
+            remote_path: '/var/www/app'
+            sftp_only: true
+            password: ${{ secrets.FTP_PASSWORD }}
+```
 
-| Key | Value | Required | Default |
-| - | - | - | - |
-| 'AWS_S3_BUCKET' | Name of your S3 bucket eg.`my-bucket` | Yes | N/A |
-| 'AWS_ACCESS_KEY_ID' | Your AWS IAM access key. Store this as a Github secret | Yes | N/A |
-| 'AWS_SECRET_ACCESS_KEY' | Your AWS IAM secret key. Store this as a Github secret | Yes | N/A |
-| 'AWS_REGION' | The region of your S3 bucket eg. `us-west-2` | No | eu-west-1 (Dublin) |
-| 'SOURCE_DIR' | The name of the directory you want to sync with S3. Mkdocs by default builds site files in a directory named `site` | No | `.` |
+## 1. [Deploy React App Example](https://github.com/wlixcc/React-Deploy)
 
-## License
+> If you use nginx, all you need to do is upload the static files to the server after the project is built
 
-This project is distributed under the [MIT license](LICENSE.md).
+```yaml
+on: [push]
+
+jobs:
+    deploy_job:
+    runs-on: ubuntu-latest
+    name: build&deploy
+    steps:
+        # To use this repository's private action, you must check out the repository
+        - name: Checkout
+        uses: actions/checkout@v2
+
+        - name: Install Dependencies
+        run: yarn
+        - name: Build
+        run: yarn build
+
+        - name: deploy file to server
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+            username: 'root'
+            server: '${{ secrets.SERVER_IP }}'
+            ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+            local_path: './site/*'
+            remote_path: '/var/www/react-app'
+            sftpArgs: '-o ConnectTimeout=5'
+```
+
+ ![](./resource/reactExample.jpg)
+ 
+## 2.Deploy Umi App Example (Ant Design Pro)
+
+```yaml
+name: continuous deployment
+on: [push]
+
+jobs:
+    deploy_job:
+    runs-on: ubuntu-latest
+    name: build&deploy
+    steps:
+        # To use this repository's private action, you must check out the repository
+        - name: Checkout
+        uses: actions/checkout@v2
+        
+        - name: Install umi
+        run: yarn global add umi  
+
+        - name: Install Dependencies
+        run: yarn
+        - name: Build
+        run: yarn build
+
+        - name: deploy file to server
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+            username: 'root'
+            server: '${{ secrets.SERVER_IP }}'
+            ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+            local_path: './site/*'
+            remote_path: '/var/www/umiapp'
+            sftpArgs: '-o ConnectTimeout=5'
+```
+ ![](./resource/umiExample.jpg)

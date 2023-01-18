@@ -1,6 +1,6 @@
 
 # action.yml
-name: 'mkdocs deploy with sftp'
+name: 'hugo deploy with sftp'
 description: 'Deploy file to your server use sftp & ssh private key'
 inputs:
   username:

@@ -1,8 +1,9 @@
 #!/bin/sh
 
-
 # Build our mkdocs site.
 mkdocs build
+
+ls ./site
 
 #!/bin/sh -l
 
