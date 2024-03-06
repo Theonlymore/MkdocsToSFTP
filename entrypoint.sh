@@ -19,7 +19,7 @@ fi
 echo 'Deploying using rsync...'
 
 # Sync site to remote server using sshpass and rsync
-sshpass -p {$10} rsync $RSYNC_OPTIONS -e "ssh -o StrictHostKeyChecking=no -p $3" $MKDOCS_BUILD_DIR/ $1@$2:$6
+rsync $RSYNC_OPTIONS --rsh="/usr/bin/sshpass -p {$10} ssh -o StrictHostKeyChecking=no -l {{$1}}" ./site  $2:$6
 
 echo 'Deploy Success'
 
