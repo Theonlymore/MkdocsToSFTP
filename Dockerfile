@@ -2,6 +2,7 @@ FROM alpine:3.13
 
 
 RUN apk add --no-cache openssh
+RUN apk add --no-cache rsync
 RUN apk add --no-cache python3
 RUN apk add --no-cache py3-pip
 
