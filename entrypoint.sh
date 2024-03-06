@@ -1,48 +1,50 @@
 #!/bin/sh -l
 
-#set -e at the top of your script will make the script exit with an error whenever an error occurs (and is not explicitly handled)
+# Exit on error
 set -eu
 
-TEMP_SSH_PRIVATE_KEY_FILE='../private_key.pem'
+# Build mkdocs site.
+echo "Building mkdocs site..."
+mkdocs build
 
-# make sure remote path is not empty
+# Directory containing the built mkdocs site
+MKDOCS_BUILD_DIR='./site'
+
+# Temporary file paths
+TEMP_SSH_PRIVATE_KEY_FILE='../private_key.pem'
+RSYNC_OPTIONS="-avz --delete"
+
+# Remote path cannot be empty
 if [ -z "$6" ]; then
-   echo 'remote_path is empty'
+   echo 'Error: remote_path is empty'
    exit 1
 fi
 
-# use password
-if [ -z != ${10} ]; then
-        echo 'use sshpass'
-        apk add sshpass
+# Use password authentication
+if [ -z ${10} ]; then
+   echo 'Deploying using rsync with password authentication...'
+   
+   # Install sshpass and rsync, if not already installed. Adjust as necessary for your base image.
+   apk add --no-cache sshpass rsync
 
-        if test $9 == "true";then
-                echo 'Start delete remote files'
-                sshpass -p ${10} ssh -o StrictHostKeyChecking=no -p $3 $1@$2 rm -rf $6
-        fi
+   # Sync mkdocs site to remote server
+   sshpass -p ${10} rsync $RSYNC_OPTIONS -e "ssh -o StrictHostKeyChecking=no -p $3" $MKDOCS_BUILD_DIR/ $1@$2:$6
 
-        echo 'RSync Start'
-        SSHPASS=${10} rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no -p $3" $5 $1@$2:$6
+   echo 'Deploy Success'
 
-        echo 'Deploy Success'
+   exit 0
+else
+    # Rsync with SSH key
+    echo 'Deploying using rsync with SSH key authentication...'
+    
+    # Ensure the private key file content is stored
+    printf "%s" "$4" >$TEMP_SSH_PRIVATE_KEY_FILE
+    chmod 600 $TEMP_SSH_PRIVATE_KEY_FILE
 
-    exit 0
+    # Sync mkdocs site to remote server
+    rsync $RSYNC_OPTIONS -e "ssh -o StrictHostKeyChecking=no -p $3 -i $TEMP_SSH_PRIVATE_KEY_FILE" $MKDOCS_BUILD_DIR/ $1@$2:$6
+
+    echo 'Deploy Success'
 fi
 
-# keep string format
-printf "%s" "$4" >$TEMP_SSH_PRIVATE_KEY_FILE
-# avoid Permissions too open
-chmod 600 $TEMP_SSH_PRIVATE_KEY_FILE
-
-# delete remote files if needed
-if test $9 == "true";then
-  echo 'Start delete remote files'
-  ssh -o StrictHostKeyChecking=no -p $3 -i $TEMP_SSH_PRIVATE_KEY_FILE $1@$2 rm -rf $6
-fi
-
-echo 'RSync Start'
-rsync -avz --delete -e "ssh -p $3 -i $TEMP_SSH_PRIVATE_KEY_FILE -o StrictHostKeyChecking=no" $5 $1@$2:$6
-
-echo 'Deploy Success'
 exit 0
-
